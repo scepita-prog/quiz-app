@@ -17,5 +17,5 @@ ul {
 
 li {
   margin: 15px 0;
+  font-size: 2em; /* väčšie písmo pre TV */
 }
-
