@@ -1,14 +1,12 @@
 async function fetchQuestion() {
-  // statický JSON súbor prvej otázky
   const response = await fetch("question.json");
   const q = await response.json();
-
   renderQuestion(q);
 }
 
 function renderQuestion(q) {
   const container = document.getElementById("quiz-container");
-  container.innerHTML = ""; // vyčisti predchádzajúce
+  container.innerHTML = "";
 
   const title = document.createElement("h1");
   title.textContent = `Kvíz: ${q.kvizNazov} | Kolo ${q.kolo}`;
@@ -23,7 +21,6 @@ function renderQuestion(q) {
     q.moznosti.forEach(opt => {
       const li = document.createElement("li");
       li.textContent = `${opt.id}: ${opt.text}`;
-      li.style.fontSize = "2em"; // väčšie písmo pre TV
       ul.appendChild(li);
     });
     container.appendChild(ul);
@@ -37,5 +34,5 @@ function renderQuestion(q) {
   }
 }
 
-// zavolaj hned pri načítaní
+// zavolaj pri načítaní
 fetchQuestion();
