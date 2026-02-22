@@ -1,37 +1,39 @@
 // admin.js
 
-// URL CSV publikovaného Google Sheet
+// CSV URL z Google Sheets (stĺpec S obsahuje JSON)
 const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRaFYIrdfA-TdCOqs3VXXQ_dqFWQV4NFnoYdfqtHHmJJi08bW8bR8JXm1hVfgkuEStZuzxf06C9-oq6/pub?gid=1156586239&single=true&output=csv';
 
-let questions = []; // pole otázok načítaných zo Sheets
+let questions = [];
 let currentIndex = 0;
 
-// načítanie CSV z Google Sheets a konverzia do JSON
+// Načítanie CSV a konverzia stĺpca S do objektov
 async function loadQuestions() {
   const res = await fetch(sheetCSV);
   const text = await res.text();
-
-  // rozdelíme riadky CSV
   const rows = text.split('\n');
 
-  // predpokladáme, že JSON je v poslednom stĺpci (S, index 18 ak počítame od 0)
-  questions = rows.slice(1) // ignorujeme header
-    .map(r => r.split(',')[18]) // stĺpec S
-    .filter(x => x) // ignorujeme prázdne
-    .map(x => JSON.parse(x)); // prevedieme string JSON na objekt
+  // predpokladáme, že stĺpec S je 19. stĺpec (index 18)
+  questions = rows.slice(1)
+    .map(r => r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)) // rozdelí CSV správne, aj s čiarkami v textoch
+    .map(r => {
+      try { return JSON.parse(r[18]); } catch { return null; }
+    })
+    .filter(x => x);
 }
 
-// funkcia na zobrazenie aktuálnej otázky
+// Zobrazenie aktuálnej otázky
 function showQuestion(index) {
   const container = document.getElementById('quiz-container');
   const q = questions[index];
-
   if (!q) {
     container.innerHTML = "<p>Koniec otázok</p>";
     return;
   }
 
-  let html = `<h2>Otázka ${index+1}</h2>`;
+  let html = `<h2>Otázka ${index + 1}</h2>`;
+
+  // zobrazíme text otázky ak je
+  if (q.text) html += `<p>${q.text}</p>`;
 
   switch(q.type) {
     case "ABC":
@@ -45,7 +47,7 @@ function showQuestion(index) {
       break;
 
     case "TEXT":
-      html += `<p>Textová odpoveď: ${q.correct}</p>`;
+      html += `<p>Správna odpoveď: ${q.correct}</p>`;
       break;
 
     case "ORDER":
@@ -70,9 +72,9 @@ function showQuestion(index) {
   container.innerHTML = html;
 }
 
-// tlačidlo “Ďalšia otázka”
+// Prepnutie na ďalšiu otázku
 function nextQuestion() {
-  if(currentIndex < questions.length - 1){
+  if (currentIndex < questions.length - 1) {
     currentIndex++;
     showQuestion(currentIndex);
   } else {
@@ -81,14 +83,16 @@ function nextQuestion() {
   }
 }
 
-// inicializácia
+// Inicializácia po načítaní stránky
 window.onload = async () => {
   await loadQuestions();
   showQuestion(currentIndex);
 
-  // vytvoríme tlačidlo “Ďalšia otázka”
+  // pridanie tlačidla “Ďalšia otázka”
   const btn = document.createElement("button");
   btn.textContent = "Ďalšia otázka";
+  btn.style.marginTop = "20px";
+  btn.style.padding = "10px 20px";
   btn.onclick = nextQuestion;
   document.body.appendChild(btn);
 };
