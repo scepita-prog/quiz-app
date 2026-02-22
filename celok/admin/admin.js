@@ -1,72 +1,82 @@
-// Link na publikovaný Google Sheet CSV (tvoj)
+// admin.js
 const sheetCSV = 'https://docs.google.com/spreadsheets/d/19viTCrqEdk0r_B56exdU2PpxMCYMpfrC5yE15MgTAjw/export?format=csv&gid=1156586239';
-
-async function loadQuestions() {
-  const res = await fetch(sheetCSV);
-  const csvText = await res.text();
-  const rows = csvText.split('\n').map(r => r.split(','));
-  
-  const headers = rows[0];
-  const dataJsonIndex = headers.indexOf('data_json');
-  
-  const questions = rows.slice(1).map(r => {
-    try {
-      return JSON.parse(r[dataJsonIndex]);
-    } catch (e) {
-      return null;
-    }
-  }).filter(q => q !== null);
-  
-  return questions;
-}
 
 let questions = [];
 let currentIndex = 0;
+const container = document.getElementById('question-container');
+const nextBtn = document.getElementById('next-btn');
 
-function showQuestion(index) {
-  const q = questions[index];
-  if (!q) return;
+async function loadQuestions() {
+  try {
+    const res = await fetch(sheetCSV);
+    const csvText = await res.text();
 
-  document.getElementById('question-text').innerText = q.text || "Bez textu";
+    // Použijeme PapaParse, aby sme korektne rozdelili bunky aj s čiarkami
+    const parsed = Papa.parse(csvText, { header: true });
+    
+    questions = parsed.data.map(row => {
+      try {
+        return JSON.parse(row.data_json);
+      } catch(e) {
+        console.error('Chyba parsovania JSON v riadku:', row, e);
+        return null;
+      }
+    }).filter(q => q !== null);
 
-  const optionsDiv = document.getElementById('options');
-  optionsDiv.innerHTML = '';
-
-  if (q.typ === 'ABC' || q.typ === 'T/F') {
-    for (const key of ['A','B','C','D'].filter(k => q[k])) {
-      const btn = document.createElement('button');
-      btn.innerText = `${key}: ${q[key]}`;
-      optionsDiv.appendChild(btn);
-    }
-  } else if (q.typ === 'text') {
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'Odpoveď';
-    optionsDiv.appendChild(input);
-  } else if (q.typ === 'zoradenie' || q.typ === 'spajanie' || q.typ === 'kombinacia') {
-    const info = document.createElement('div');
-    info.innerText = `Typ otázky "${q.typ}" sa zatiaľ vizualizuje staticky.`;
-    optionsDiv.appendChild(info);
+    console.log('Načítané otázky:', questions.length);
+    if (questions.length > 0) showQuestion(0);
+  } catch (err) {
+    console.error('Chyba pri načítaní CSV:', err);
+    container.textContent = 'Nepodarilo sa načítať otázky.';
   }
 }
 
-// Navigácia
-document.getElementById('prev-btn').addEventListener('click', () => {
-  if (currentIndex > 0) {
-    currentIndex--;
-    showQuestion(currentIndex);
-  }
-});
+function showQuestion(index) {
+  if (index < 0 || index >= questions.length) return;
+  const q = questions[index];
 
-document.getElementById('next-btn').addEventListener('click', () => {
-  if (currentIndex < questions.length - 1) {
-    currentIndex++;
-    showQuestion(currentIndex);
+  let html = `<h2>${q.text}</h2>`;
+  
+  if (q.type === 'ABC' || q.type === 'T/F') {
+    html += '<ul>';
+    q.options.forEach((opt, i) => {
+      html += `<li>${String.fromCharCode(65 + i)}: ${opt}</li>`;
+    });
+    html += '</ul>';
+  } else if (q.type === 'text') {
+    html += `<input type="text" placeholder="Odpoveď...">`;
+  } else if (q.type === 'zoradenie') {
+    html += '<ul>';
+    q.options.forEach(opt => {
+      html += `<li>${opt}</li>`;
+    });
+    html += '</ul>';
+  } else if (q.type === 'spajanie') {
+    html += '<ul>';
+    q.left.forEach((leftItem, i) => {
+      html += `<li>${leftItem} → ${q.right[i]}</li>`;
+    });
+    html += '</ul>';
+  } else if (q.type === 'kombinacia') {
+    html += '<ul>';
+    q.options.forEach((opt, i) => {
+      html += `<li>${String.fromCharCode(65 + i)}: ${opt}</li>`;
+    });
+    html += '</ul>';
   }
-});
 
-// Načítanie otázok pri štarte
-loadQuestions().then(qs => {
-  questions = qs;
+  container.innerHTML = html;
+}
+
+nextBtn.addEventListener('click', () => {
+  currentIndex++;
+  if (currentIndex >= questions.length) {
+    container.innerHTML = '<h2>Koniec otázok</h2>';
+    nextBtn.disabled = true;
+    return;
+  }
   showQuestion(currentIndex);
 });
+
+// Načítame otázky pri spustení
+loadQuestions();
