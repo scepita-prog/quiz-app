@@ -1,23 +1,23 @@
+<!-- admin.html -->
 <!DOCTYPE html>
 <html lang="sk">
 <head>
 <meta charset="UTF-8">
-<title>Quiz Admin</title>
-<link rel="stylesheet" href="style.css">
+<title>Admin Quiz</title>
+<style>
+  body { font-family: sans-serif; padding: 20px; }
+  #question-container { border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; }
+  button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+</style>
 </head>
 <body>
-<h1>Quiz Admin</h1>
 
-<div id="admin-container">
-  <h2 id="question-text">Načítavam otázku...</h2>
-  <div id="options"></div>
+<h1>Admin Quiz</h1>
+<div id="question-container">Načítavam otázky...</div>
+<button id="next-btn">Ďalšia otázka</button>
 
-  <div id="controls">
-    <button id="prev-btn">Predošlá</button>
-    <button id="next-btn">Ďalšia</button>
-  </div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="admin.js"></script>
+
 </body>
 </html>
