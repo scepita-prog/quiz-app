@@ -1,37 +1,30 @@
-const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRaFYIrdfA-TdCOqs3VXXQ_dqFWQV4NFnoYdfqtHHmJJi08bW8bR8JXm1hVfgkuEStZuzxf06C9-oq6/pub?gid=1156586239&single=true&output=csv';
+// admin.js
 
-let questions = [];
+let questions = [];  // tu sa načítajú otázky z data_json
 let currentIndex = 0;
 
+// Funkcia na načítanie CSV / JSON z Google Sheets
 async function loadQuestions() {
-  const res = await fetch(sheetCSV);
-  const text = await res.text();
-
-  // Použijeme PapaParse na správne spracovanie CSV
-  const parsed = Papa.parse(text, { header: true });
-
-  // Konvertujeme každý riadok stĺpec "data_json" na objekt
-  questions = parsed.data
-    .map(row => {
-      if (!row.data_json) return null;
+  try {
+    const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRaFYIrdfA-TdCOqs3VXXQ_dqFWQV4NFnoYdfqtHHmJJi08bW8bR8JXm1hVfgkuEStZuzxf06C9-oq6/pub?gid=1156586239&single=true&output=csv');
+    const text = await response.text();
+    const rows = text.split('\n').slice(1); // preskocime header
+    questions = rows.map(r => {
+      const cols = r.split(',');
       try {
-        return JSON.parse(row.data_json);
+        return JSON.parse(cols[18]); // stlpec S / data_json
       } catch (e) {
-        console.error("Chyba JSON v riadku", row, e);
+        console.error('Chyba pri parsovani JSON:', cols[18]);
         return null;
       }
-    })
-    .filter(q => q !== null);
-
-  console.log("Načítané otázky:", questions.length);
-
-  if (questions.length > 0) {
+    }).filter(q => q !== null);
     showQuestion(currentIndex);
-  } else {
-    document.getElementById('quiz-container').innerHTML = 'Žiadne otázky na zobrazenie.';
+  } catch (err) {
+    console.error('Chyba pri nacitani otazok:', err);
   }
 }
 
+// Funkcia na zobrazenie otazky
 function showQuestion(index) {
   const container = document.getElementById('quiz-container');
   if (index >= questions.length) {
@@ -41,37 +34,52 @@ function showQuestion(index) {
 
   const q = questions[index];
   let html = `<h2>Otázka ${index + 1}</h2>`;
+  html += `<p>${q.text}</p>`; // text otázky
 
-  // Typ otázky
   switch (q.type) {
     case "ABC":
     case "MULTI":
-      html += `<p>${q.options.join(' | ')}</p>`;
+      html += `<p>Možnosti: ${q.options.join(' | ')}</p>`;
+      html += `<p>Správna odpoveď: ${q.correct.join(', ')}</p>`;
       break;
+
     case "TF":
-      html += `<p>${q.options.join(' | ')}</p>`;
+      html += `<p>Možnosti: ${q.options.join(' | ')}</p>`;
+      html += `<p>Správna odpoveď: ${q.correct.join(', ')}</p>`;
       break;
+
     case "TEXT":
-      html += `<p>${q.correct}</p>`;
+      html += `<p>Správna odpoveď: ${q.correct}</p>`;
       break;
+
     case "ORDER":
-      html += `<p>${q.options.join(' | ')}</p>`;
+      html += `<p>Možnosti: ${q.options.join(' | ')}</p>`;
+      html += `<p>Správne poradie: ${q.correctOrder.join(', ')}</p>`;
       break;
+
     case "MATCH":
-      html += `<p>Left: ${q.left.join(', ')}<br>Right: ${q.right.join(', ')}</p>`;
+      html += `<p>Left: ${q.left.join(', ')}</p>`;
+      html += `<p>Right: ${q.right.join(', ')}</p>`;
+      html += `<p>Správne páry: ${q.pairs.join(', ')}</p>`;
       break;
   }
 
   container.innerHTML = html;
 }
 
+// Funkcia na prepnutie na dalsiu otazku
 function nextQuestion() {
   currentIndex++;
   showQuestion(currentIndex);
 }
 
-// Na tlačidlo "Ďalšia otázka"
-document.getElementById('next-btn').addEventListener('click', nextQuestion);
+// Inicializacia po nacitani stranky
+window.addEventListener('DOMContentLoaded', () => {
+  loadQuestions();
 
-// Načítame otázky po spustení
-loadQuestions();
+  // tlacidlo dalsia otazka
+  const nextBtn = document.getElementById('next-btn');
+  if (nextBtn) {
+    nextBtn.addEventListener('click', nextQuestion);
+  }
+});
