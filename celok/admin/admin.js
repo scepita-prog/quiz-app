@@ -1,78 +1,77 @@
-let questions = []; // pole načítaných otázok
-let currentIndex = 0;
-
-// CSV URL (export zo Sheets ako CSV)
 const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRaFYIrdfA-TdCOqs3VXXQ_dqFWQV4NFnoYdfqtHHmJJi08bW8bR8JXm1hVfgkuEStZuzxf06C9-oq6/pub?gid=1156586239&single=true&output=csv';
 
-// Funkcia na načítanie CSV a prevod do JSON
+let questions = [];
+let currentIndex = 0;
+
 async function loadQuestions() {
   const res = await fetch(sheetCSV);
   const text = await res.text();
-  const rows = text.split("\n").slice(1); // preskočíme hlavičku
 
-  questions = rows.map(row => {
-    try {
-      const cols = row.split(','); 
-      const jsonStr = cols[18]; // stĺpec S (0-index 18)
-      if (!jsonStr) return null;
-      return JSON.parse(jsonStr);
-    } catch(e) {
-      console.error("Chyba pri parsovaní JSON:", e);
-      return null;
-    }
-  }).filter(q => q !== null);
+  // Použijeme PapaParse na správne spracovanie CSV
+  const parsed = Papa.parse(text, { header: true });
 
-  showQuestion(currentIndex);
+  // Konvertujeme každý riadok stĺpec "data_json" na objekt
+  questions = parsed.data
+    .map(row => {
+      if (!row.data_json) return null;
+      try {
+        return JSON.parse(row.data_json);
+      } catch (e) {
+        console.error("Chyba JSON v riadku", row, e);
+        return null;
+      }
+    })
+    .filter(q => q !== null);
+
+  console.log("Načítané otázky:", questions.length);
+
+  if (questions.length > 0) {
+    showQuestion(currentIndex);
+  } else {
+    document.getElementById('quiz-container').innerHTML = 'Žiadne otázky na zobrazenie.';
+  }
 }
 
-// Funkcia na zobrazenie otázky
 function showQuestion(index) {
+  const container = document.getElementById('quiz-container');
   if (index >= questions.length) {
-    document.getElementById("question-text").innerText = "Koniec otázok!";
-    document.getElementById("options-list").innerHTML = "";
-    document.getElementById("next-btn").disabled = true;
+    container.innerHTML = '<h2>Koniec otázok</h2>';
     return;
   }
 
   const q = questions[index];
-  const qTextElem = document.getElementById("question-text");
-  const optionsList = document.getElementById("options-list");
+  let html = `<h2>Otázka ${index + 1}</h2>`;
 
-  // Zobrazenie textu otázky
-  qTextElem.innerText = q.type === "TEXT" ? "Napíš odpoveď:" : "Otázka: " + (q.question || ""); // otázka si môžeš doplniť do JSON
-
-  // Vyčistenie predchádzajúcich možností
-  optionsList.innerHTML = "";
-
-  // Zobrazenie možností podľa typu
-  if (q.type === "ABC" || q.type === "TF" || q.type === "ORDER" || q.type === "MULTI") {
-    q.options.forEach((opt, i) => {
-      if (!opt) return;
-      const li = document.createElement("li");
-      li.innerText = opt;
-      optionsList.appendChild(li);
-    });
-  } else if (q.type === "MATCH") {
-    const left = q.left;
-    const right = q.right;
-    for (let i = 0; i < left.length; i++) {
-      const li = document.createElement("li");
-      li.innerText = `${left[i]} ↔ ${right[i]}`;
-      optionsList.appendChild(li);
-    }
-  } else if (q.type === "TEXT") {
-    const input = document.createElement("input");
-    input.type = "text";
-    input.placeholder = "Napíš odpoveď...";
-    optionsList.appendChild(input);
+  // Typ otázky
+  switch (q.type) {
+    case "ABC":
+    case "MULTI":
+      html += `<p>${q.options.join(' | ')}</p>`;
+      break;
+    case "TF":
+      html += `<p>${q.options.join(' | ')}</p>`;
+      break;
+    case "TEXT":
+      html += `<p>${q.correct}</p>`;
+      break;
+    case "ORDER":
+      html += `<p>${q.options.join(' | ')}</p>`;
+      break;
+    case "MATCH":
+      html += `<p>Left: ${q.left.join(', ')}<br>Right: ${q.right.join(', ')}</p>`;
+      break;
   }
+
+  container.innerHTML = html;
 }
 
-// Tlačidlo “Ďalšia otázka”
-document.getElementById("next-btn").addEventListener("click", () => {
+function nextQuestion() {
   currentIndex++;
   showQuestion(currentIndex);
-});
+}
 
-// Načítanie otázok po spustení
+// Na tlačidlo "Ďalšia otázka"
+document.getElementById('next-btn').addEventListener('click', nextQuestion);
+
+// Načítame otázky po spustení
 loadQuestions();
