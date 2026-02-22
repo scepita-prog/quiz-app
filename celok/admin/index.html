@@ -3,11 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <title>Admin Quiz</title>
-<link rel="stylesheet" href="style.css">
+<style>
+  body { font-family: sans-serif; padding: 20px; background: #f7f7f7; }
+  #quiz-container { background: white; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto; }
+  h2 { margin-bottom: 10px; }
+  ul { list-style: none; padding: 0; }
+  li { margin: 5px 0; padding: 8px; background: #eee; border-radius: 5px; }
+  button { padding: 10px 20px; margin-top: 20px; cursor: pointer; }
+</style>
 </head>
 <body>
-<h1>Admin Quiz</h1>
-<div id="quiz-container">Načítavam otázky...</div>
+
+<div id="quiz-container">
+  <h2 id="question-text">Načítavam otázku...</h2>
+  <ul id="options-list"></ul>
+  <button id="next-btn">Ďalšia otázka</button>
+</div>
+
 <script src="admin.js"></script>
 </body>
 </html>
