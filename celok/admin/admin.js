@@ -1,5 +1,5 @@
 // Link na publikovaný Google Sheet CSV (tvoj)
-const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRaFYIrdfA-TdCOqs3VXXQ_dqFWQV4NFnoYdfqtHHmJJi08bW8bR8JXm1hVfgkuEStZuzxf06C9-oq6/pub?gid=1156586239&single=true&output=csv';
+const sheetCSV = 'https://docs.google.com/spreadsheets/d/19viTCrqEdk0r_B56exdU2PpxMCYMpfrC5yE15MgTAjw/export?format=csv&gid=1156586239';
 
 async function loadQuestions() {
   const res = await fetch(sheetCSV);
