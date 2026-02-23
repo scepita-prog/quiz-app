@@ -1,85 +1,86 @@
-// admin.js
+const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRaFYIrdfA-TdCOqs3VXXQ_dqFWQV4NFnoYdfqtHHmJJi08bW8bR8JXm1hVfgkuEStZuzxf06C9-oq6/pub?gid=1156586239&single=true&output=csv';
 
-let questions = [];  // tu sa načítajú otázky z data_json
+let questions = [];
 let currentIndex = 0;
 
-// Funkcia na načítanie CSV / JSON z Google Sheets
 async function loadQuestions() {
+  const container = document.getElementById("quiz-container");
+  container.innerHTML = "Načítavam otázky…";
+
   try {
-    const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRaFYIrdfA-TdCOqs3VXXQ_dqFWQV4NFnoYdfqtHHmJJi08bW8bR8JXm1hVfgkuEStZuzxf06C9-oq6/pub?gid=1156586239&single=true&output=csv');
+    const response = await fetch(sheetCSV);
     const text = await response.text();
-    const rows = text.split('\n').slice(1); // preskocime header
-    questions = rows.map(r => {
-      const cols = r.split(',');
+
+    const rows = text.split("\n").slice(1); // bez hlavičky
+
+    questions = rows.map(row => {
+      if (!row.includes("{")) return null;
+
+      // TEXT otázky (stĺpec G)
+      const cols = row.split(",");
+      const questionText = cols[6];
+
+      // JSON zo stĺpca S — berieme celý objekt
+      const jsonStart = row.indexOf("{");
+      const jsonEnd = row.lastIndexOf("}") + 1;
+      const jsonString = row.substring(jsonStart, jsonEnd);
+
       try {
-        return JSON.parse(cols[18]); // stlpec S / data_json
+        const data = JSON.parse(jsonString);
+        data.text = questionText;
+        return data;
       } catch (e) {
-        console.error('Chyba pri parsovani JSON:', cols[18]);
+        console.log("JSON error:", jsonString);
         return null;
       }
     }).filter(q => q !== null);
+
+    if (questions.length === 0) {
+      container.innerHTML = "Nenašli sa žiadne otázky";
+      return;
+    }
+
     showQuestion(currentIndex);
+
   } catch (err) {
-    console.error('Chyba pri nacitani otazok:', err);
+    container.innerHTML = "Chyba načítania dát";
+    console.error(err);
   }
 }
 
-// Funkcia na zobrazenie otazky
 function showQuestion(index) {
-  const container = document.getElementById('quiz-container');
+  const container = document.getElementById("quiz-container");
+
   if (index >= questions.length) {
-    container.innerHTML = '<h2>Koniec otázok</h2>';
+    container.innerHTML = "<h2>Koniec otázok</h2>";
     return;
   }
 
   const q = questions[index];
+
   let html = `<h2>Otázka ${index + 1}</h2>`;
-  html += `<p>${q.text}</p>`; // text otázky
+  html += `<p>${q.text}</p>`;
 
-  switch (q.type) {
-    case "ABC":
-    case "MULTI":
-      html += `<p>Možnosti: ${q.options.join(' | ')}</p>`;
-      html += `<p>Správna odpoveď: ${q.correct.join(', ')}</p>`;
-      break;
+  if (q.options) {
+    html += "<ul>";
+    q.options.forEach(opt => html += `<li>${opt}</li>`);
+    html += "</ul>";
+  }
 
-    case "TF":
-      html += `<p>Možnosti: ${q.options.join(' | ')}</p>`;
-      html += `<p>Správna odpoveď: ${q.correct.join(', ')}</p>`;
-      break;
-
-    case "TEXT":
-      html += `<p>Správna odpoveď: ${q.correct}</p>`;
-      break;
-
-    case "ORDER":
-      html += `<p>Možnosti: ${q.options.join(' | ')}</p>`;
-      html += `<p>Správne poradie: ${q.correctOrder.join(', ')}</p>`;
-      break;
-
-    case "MATCH":
-      html += `<p>Left: ${q.left.join(', ')}</p>`;
-      html += `<p>Right: ${q.right.join(', ')}</p>`;
-      html += `<p>Správne páry: ${q.pairs.join(', ')}</p>`;
-      break;
+  if (q.type === "MATCH") {
+    html += `<p>Spájanie:</p>`;
+    html += `<p>${q.left.join(", ")} ↔ ${q.right.join(", ")}</p>`;
   }
 
   container.innerHTML = html;
 }
 
-// Funkcia na prepnutie na dalsiu otazku
 function nextQuestion() {
   currentIndex++;
   showQuestion(currentIndex);
 }
 
-// Inicializacia po nacitani stranky
-window.addEventListener('DOMContentLoaded', () => {
+window.onload = () => {
   loadQuestions();
-
-  // tlacidlo dalsia otazka
-  const nextBtn = document.getElementById('next-btn');
-  if (nextBtn) {
-    nextBtn.addEventListener('click', nextQuestion);
-  }
-});
+  document.getElementById("next-btn").onclick = nextQuestion;
+};
