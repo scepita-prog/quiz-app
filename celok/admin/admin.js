@@ -10,31 +10,24 @@ window.onload = async () => {
   const res = await fetch(sheetCSV);
   const text = await res.text();
 
-  const rows = text.split("\n").slice(1);
+  const rows = text.split("\n").slice(1); // bez hlavičky
 
-  questions = rows
-    .map(row => {
-      const cols = parseCSVRow(row);
-      if (!cols[18]) return null;
+  questions = rows.map(row => {
+    if (!row.includes('{')) return null;
 
-      let json = cols[18].trim();
+    // zober všetko od prvého { po posledný }
+    let json = row.substring(row.indexOf("{"), row.lastIndexOf("}") + 1);
 
-      // odstrániť vonkajšie úvodzovky
-      if (json.startsWith('"') && json.endsWith('"')) {
-        json = json.slice(1, -1);
-      }
+    // oprava Google escape úvodzoviek
+    json = json.replace(/""/g, '"');
 
-      // opraviť zdvojené úvodzovky
-      json = json.replace(/""/g, '"');
-
-      try {
-        return JSON.parse(json);
-      } catch (e) {
-        console.log("JSON chyba:", json);
-        return null;
-      }
-    })
-    .filter(q => q !== null);
+    try {
+      return JSON.parse(json);
+    } catch (e) {
+      console.log("JSON parse error:", json);
+      return null;
+    }
+  }).filter(q => q !== null);
 
   if (questions.length === 0) {
     container.innerHTML = "Nenašli sa žiadne otázky.";
@@ -43,32 +36,6 @@ window.onload = async () => {
 
   renderQuestion();
 };
-
-function parseCSVRow(row) {
-  const result = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < row.length; i++) {
-    const char = row[i];
-
-    if (char === '"') {
-      inQuotes = !inQuotes;
-      continue;
-    }
-
-    if (char === "," && !inQuotes) {
-      result.push(current);
-      current = "";
-      continue;
-    }
-
-    current += char;
-  }
-
-  result.push(current);
-  return result;
-}
 
 function renderQuestion() {
   const q = questions[currentIndex];
