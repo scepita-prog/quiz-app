@@ -15,9 +15,9 @@ window.onload = async () => {
   questions = rows
     .map(row => {
       const cols = parseCSVRow(row);
-      if (!cols[19]) return null;
+      if (!cols[18]) return null;
 
-      let json = cols[19].trim();
+      let json = cols[18].trim();
 
       // odstrániť vonkajšie úvodzovky
       if (json.startsWith('"') && json.endsWith('"')) {
